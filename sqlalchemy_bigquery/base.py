@@ -981,12 +981,21 @@ class BigQueryDialect(DefaultDialect):
         }
 
     def get_foreign_keys(self, connection, table_name, schema=None, **kw):
-        # BigQuery has no support for foreign keys.
+        table = self._get_table(connection, table_name, schema)
+        table_constraints = table.table_constraints
+        if table_constraints is not None:
+            return table_constraints.foreign_keys
         return []
 
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):
-        # BigQuery has no support for primary keys.
-        return {"constrained_columns": []}
+        table = self._get_table(connection, table_name, schema)
+        table_constraints = table.table_constraints
+        columns = []
+        if table_constraints is not None:
+            primary_key = table_constraints.primary_key
+            if primary_key:
+                columns = primary_key.columns
+        return {"constrained_columns": columns}
 
     def get_indexes(self, connection, table_name, schema=None, **kw):
         table = self._get_table(connection, table_name, schema)
