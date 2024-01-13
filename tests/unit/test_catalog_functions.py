@@ -141,15 +141,49 @@ def test_get_indexes(faux_conn):
 
 
 def test_no_table_pk_constraint(faux_conn):
-    # BigQuery doesn't do that.
-    assert faux_conn.dialect.get_pk_constraint(faux_conn, "foo") == (
-        dict(constrained_columns=[])
+    cursor = faux_conn.connection.cursor()
+    cursor.execute("create table foo (x INT64)")
+    assert faux_conn.dialect.get_pk_constraint(faux_conn, "foo") == {
+        "constrained_columns": []
+    }
+
+    from google.cloud.bigquery.table import PrimaryKey, TableConstraints
+    expected_columns =  ['id', 'product_id']
+    client = faux_conn.connection._client
+    client.tables.foo.table_constraints = TableConstraints(
+        primary_key=PrimaryKey(columns=expected_columns),
     )
+    assert faux_conn.dialect.get_pk_constraint(faux_conn, "foo") == {
+        "constrained_columns": expected_columns,
+    }
 
 
 def test_no_table_foreign_keys(faux_conn):
-    # BigQuery doesn't do that.
+    cursor = faux_conn.connection.cursor()
+    cursor.execute("create table foo (x INT64)")
     assert faux_conn.dialect.get_foreign_keys(faux_conn, "foo") == []
+
+    from google.cloud.bigquery.table import (
+        ColumnReference, ForeignKey, TableConstraints, TableReference
+    )
+    expected_foreign_keys = [
+        ForeignKey(
+            name="my_fk_name",
+            referenced_table=TableReference.from_string(
+                "my-project.your-dataset.products"
+            ),
+            column_references=[
+                ColumnReference(
+                    referencing_column="product_id", referenced_column="id"
+                ),
+            ],
+        )
+    ]
+    client = faux_conn.connection._client
+    client.tables.foo.table_constraints = TableConstraints(
+        foreign_keys=
+    )
+    assert faux_conn.dialect.get_pk_constraint(faux_conn, "foo") == expected_foreign_keys
 
 
 def test_get_table_comment(faux_conn):
