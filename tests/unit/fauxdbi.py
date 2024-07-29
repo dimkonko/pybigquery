@@ -462,6 +462,7 @@ class FauxClient:
                         table_data["sql"].lower().index("select") :
                     ]
 
+                breakpoint()
                 for aname, value in self.tables.get(table_name, {}).items():
                     setattr(table, aname, value)
 

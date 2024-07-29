@@ -1251,9 +1251,24 @@ class BigQueryDialect(DefaultDialect):
     def get_foreign_keys(self, connection, table_name, schema=None, **kw):
         table = self._get_table(connection, table_name, schema)
         table_constraints = table.table_constraints
-        if table_constraints is not None:
-            return table_constraints.foreign_keys
-        return []
+        if table_constraints is None:
+            return []
+        results = []
+        for foreign_key in table_constraints.foreign_keys:
+            constrained_columns = []
+            referred_columns = []
+            for column_ref in foreign_key.column_references:
+                constrained_columns.append(column_ref.referencing_column)
+                referred_columns.append(column_ref.referenced_column)
+            results.append({
+                "name": foreign_key.name,
+                "referred_schema": schema,
+                "referred_table": foreign_key.referenced_table,
+                "referred_columns": referred_columns,
+                "constrained_columns": constrained_columns,
+                "options": {},
+            })
+        return results
 
     def get_pk_constraint(self, connection, table_name, schema=None, **kw):
         table = self._get_table(connection, table_name, schema)
